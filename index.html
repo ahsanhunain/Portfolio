@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AHSAN HUNAIN — Game Dev Portfolio</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Cinzel:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --fire1:#ff6b00; --fire2:#ff9a00; --fire3:#ffcc44;
+  --bio1:#00c8ff;  --bio2:#00ffe7;  --bio3:#4af0ff;
+  --dark1:#020a12; --dark2:#040e18; --dark3:#071624;
+  --panel:rgba(4,14,26,.88);
+  --panel2:rgba(2,10,18,.92);
+  --border-fire:rgba(255,150,0,.4);
+  --border-bio:rgba(0,200,255,.35);
+  --text:#c8e8f8; --muted:rgba(160,220,245,.5);
+  --gold:#f0c040; --red:#ff4444; --green:#44ff88;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--dark1);color:var(--text);font-family:'Exo 2',sans-serif;overflow-x:hidden;}
+
+/* ══════════════════════════════════
+   LOADING SCREEN
+══════════════════════════════════ */
+#loader{
+  position:fixed;inset:0;z-index:9999;
+  background:#010810;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transition:opacity .8s;
+}
+#loader.out{opacity:0;pointer-events:none;}
+.loader-logo{
+  font-family:'Cinzel',serif;font-size:1.8rem;font-weight:900;
+  letter-spacing:.1em;color:#fff;margin-bottom:.5rem;
+  text-shadow:0 0 30px rgba(0,200,255,.4);
+  animation:logoPulse 2s ease-in-out infinite;
+}
+@keyframes logoPulse{0%,100%{text-shadow:0 0 30px rgba(0,200,255,.4);}50%{text-shadow:0 0 60px rgba(0,200,255,.7),0 0 100px rgba(0,200,255,.3);}}
+.loader-sub{font-family:'Press Start 2P',monospace;font-size:.55rem;color:rgba(0,200,255,.5);letter-spacing:.2em;margin-bottom:2.5rem;}
+.load-bar-wrap{width:320px;height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;margin-bottom:1rem;position:relative;}
+.load-bar-wrap::before,.load-bar-wrap::after{content:'';position:absolute;top:-3px;bottom:-3px;width:1px;background:rgba(0,200,255,.3);}
+.load-bar-wrap::before{left:0;}.load-bar-wrap::after{right:0;}
+.load-bar{height:100%;width:0;background:linear-gradient(90deg,var(--fire1),var(--bio1));animation:loadFill 2.8s ease-in-out forwards;}
+@keyframes loadFill{0%{width:0}60%{width:70%}80%{width:85%}100%{width:100%}}
+.load-text{font-family:'Press Start 2P',monospace;font-size:.45rem;color:rgba(0,200,255,.4);letter-spacing:.15em;animation:loadDots 1.5s infinite;}
+@keyframes loadDots{0%,100%{content:'LOADING.'}33%{content:'LOADING..'}66%{content:'LOADING...'}}
+.load-percent{font-family:'Press Start 2P',monospace;font-size:.55rem;color:var(--bio1);margin-top:.5rem;}
+
+/* ══════════════════════════════════
+   SKY WORLD (persistent BG)
+══════════════════════════════════ */
+.sky-wrap{position:fixed;inset:0;z-index:0;}
+.sky-base{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,#0d2040 0%,#050e1c 40%,#010810 100%);}
+.aurora-wrap{position:absolute;inset:0;overflow:hidden;}
+.aur{position:absolute;left:0;right:0;opacity:.5;}
+.aur1{height:220px;top:0;background:linear-gradient(180deg,transparent,rgba(0,200,255,.11) 30%,rgba(0,255,200,.15) 55%,transparent);animation:aw 10s ease-in-out infinite;transform:skewY(-5deg);}
+.aur2{height:170px;top:25px;background:linear-gradient(180deg,transparent,rgba(80,0,200,.05) 35%,rgba(0,220,255,.12) 60%,transparent);animation:aw 15s ease-in-out infinite reverse;animation-delay:-4s;transform:skewY(-3deg);}
+@keyframes aw{0%,100%{transform:skewY(-5deg) translateX(0);}50%{transform:skewY(-4deg) translateX(2%);}}
+.star-field{position:absolute;inset:0;}
+.scale-tex{position:absolute;inset:0;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='46'%3E%3Cellipse cx='20' cy='23' rx='16' ry='20' fill='none' stroke='%2300c8ff' stroke-width='.7'/%3E%3C/svg%3E");background-size:40px 46px;}
+
+canvas{position:fixed;inset:0;pointer-events:none;}
+#cvEmber{z-index:2;}
+#cvBio{z-index:2;}
+
+/* mountain SVG */
+.mountains{position:fixed;bottom:0;left:0;right:0;z-index:3;height:40%;pointer-events:none;}
+
+/* ══════════════════════════════════
+   PERSISTENT HUD
+══════════════════════════════════ */
+
+/* PLAYER CARD — top left */
+.hud-player{
+  position:fixed;top:12px;left:12px;z-index:500;
+  background:var(--panel2);
+  border:1px solid var(--border-bio);
+  border-radius:4px;padding:8px 12px;
+  min-width:220px;
+  box-shadow:0 4px 20px rgba(0,0,0,.5),inset 0 0 20px rgba(0,200,255,.02);
+  backdrop-filter:blur(10px);
+  clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));
+}
+.hp-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.hud-avatar{
+  width:36px;height:36px;border-radius:3px;flex-shrink:0;
+  background:linear-gradient(135deg,rgba(0,200,255,.15),rgba(0,100,150,.1));
+  border:1px solid rgba(0,200,255,.3);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Cinzel',serif;font-size:.8rem;font-weight:700;color:var(--bio1);
+  position:relative;
+}
+.hud-avatar::after{content:'LV';position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);
+  font-family:'Press Start 2P',monospace;font-size:.3rem;color:var(--gold);
+  background:var(--dark1);padding:1px 3px;border-radius:2px;}
+.hud-name-block{flex:1;}
+.hud-name{font-family:'Cinzel',serif;font-size:.68rem;font-weight:700;color:#e8f4ff;letter-spacing:.06em;line-height:1;}
+.hud-class{font-family:'Press Start 2P',monospace;font-size:.32rem;color:var(--bio1);letter-spacing:.08em;margin-top:2px;}
+.hud-lvl{font-family:'Press Start 2P',monospace;font-size:.45rem;color:var(--gold);}
+.bar-row{display:flex;align-items:center;gap:6px;margin-top:4px;}
+.bar-label{font-family:'Press Start 2P',monospace;font-size:.3rem;width:16px;flex-shrink:0;}
+.bar-track{flex:1;height:5px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:2px;transition:width 1s;}
+.bar-hp{background:linear-gradient(90deg,#ff4444,#ff8800);}
+.bar-mp{background:linear-gradient(90deg,var(--bio1),var(--bio2));}
+.bar-xp{background:linear-gradient(90deg,var(--gold),var(--fire3));}
+.bar-val{font-family:'Press Start 2P',monospace;font-size:.3rem;color:var(--muted);width:36px;text-align:right;}
+
+/* QUEST LOG — top right */
+.hud-quest{
+  position:fixed;top:12px;right:12px;z-index:500;
+  background:var(--panel2);
+  border:1px solid var(--border-fire);
+  border-radius:4px;padding:8px 12px;min-width:210px;
+  backdrop-filter:blur(10px);
+  clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px);
+  box-shadow:0 4px 20px rgba(0,0,0,.5);
+}
+.quest-title{font-family:'Press Start 2P',monospace;font-size:.38rem;color:var(--gold);letter-spacing:.1em;margin-bottom:6px;display:flex;align-items:center;gap:5px;}
+.quest-item{display:flex;align-items:flex-start;gap:5px;margin-bottom:4px;}
+.q-check{font-family:'Press Start 2P',monospace;font-size:.35rem;flex-shrink:0;margin-top:1px;}
+.q-done{color:var(--green);}
+.q-todo{color:var(--muted);}
+.q-active{color:var(--fire2);}
+.q-text{font-family:'Exo 2',sans-serif;font-size:.62rem;color:var(--muted);line-height:1.3;}
+
+/* CONTROLS HINT — bottom right */
+.hud-controls{
+  position:fixed;bottom:12px;right:12px;z-index:500;
+  display:flex;flex-direction:column;gap:4px;align-items:flex-end;
+}
+.ctrl{display:flex;align-items:center;gap:5px;}
+.ctrl-key{
+  font-family:'Press Start 2P',monospace;font-size:.3rem;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
+  border-radius:3px;padding:2px 5px;color:#fff;
+  box-shadow:0 2px 0 rgba(0,0,0,.4);
+}
+.ctrl-lbl{font-family:'Exo 2',sans-serif;font-size:.58rem;color:rgba(255,255,255,.25);}
+
+/* COMPASS — bottom left */
+.hud-compass{
+  position:fixed;bottom:12px;left:12px;z-index:500;
+  width:64px;height:64px;
+  background:var(--panel2);border:1px solid var(--border-bio);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(10px);
+}
+.compass-inner{
+  width:50px;height:50px;border-radius:50%;
+  border:1px solid rgba(0,200,255,.2);
+  position:relative;display:flex;align-items:center;justify-content:center;
+}
+.compass-needle{
+  width:2px;height:18px;background:linear-gradient(180deg,var(--fire2),transparent);
+  position:absolute;top:4px;left:50%;transform:translateX(-50%);
+  border-radius:1px;animation:needleSpin 8s linear infinite;
+  transform-origin:bottom center;
+}
+@keyframes needleSpin{0%{transform:translateX(-50%) rotate(0deg);}100%{transform:translateX(-50%) rotate(360deg);}}
+.compass-n{position:absolute;top:1px;font-family:'Press Start 2P',monospace;font-size:.28rem;color:var(--fire2);}
+.compass-s{position:absolute;bottom:1px;font-family:'Press Start 2P',monospace;font-size:.28rem;color:var(--muted);}
+.compass-e{position:absolute;right:1px;font-family:'Press Start 2P',monospace;font-size:.28rem;color:var(--muted);}
+.compass-w{position:absolute;left:1px;font-family:'Press Start 2P',monospace;font-size:.28rem;color:var(--muted);}
+
+/* MINIMAP area label */
+.hud-area{
+  position:fixed;bottom:84px;left:12px;z-index:500;
+  font-family:'Press Start 2P',monospace;font-size:.32rem;
+  color:rgba(200,230,255,.35);letter-spacing:.1em;
+}
+
+/* ACHIEVEMENT POPUP */
+.achievement{
+  position:fixed;top:80px;right:12px;z-index:600;
+  background:var(--panel2);border:1px solid var(--gold);
+  border-radius:4px;padding:8px 12px;
+  display:flex;align-items:center;gap:8px;
+  transform:translateX(130%);transition:transform .4s cubic-bezier(.34,1.56,.64,1);
+  min-width:220px;
+  box-shadow:0 4px 20px rgba(0,0,0,.5),0 0 20px rgba(240,192,64,.1);
+}
+.achievement.show{transform:translateX(0);}
+.ach-icon{font-size:1.1rem;flex-shrink:0;}
+.ach-title{font-family:'Press Start 2P',monospace;font-size:.35rem;color:var(--gold);letter-spacing:.06em;margin-bottom:2px;}
+.ach-text{font-family:'Exo 2',sans-serif;font-size:.6rem;color:var(--muted);}
+
+/* ══════════════════════════════════
+   MAIN CONTENT
+══════════════════════════════════ */
+.content{position:relative;z-index:10;}
+
+/* ══════════════════════════════════
+   HERO / TITLE SCREEN
+══════════════════════════════════ */
+#hero{
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;padding:5rem 2rem 8rem;
+  position:relative;
+}
+.hero-eyebrow{
+  font-family:'Press Start 2P',monospace;font-size:.55rem;
+  color:var(--bio1);letter-spacing:.22em;margin-bottom:1.5rem;
+  opacity:0;animation:riseIn .7s .3s forwards;
+}
+.hero-title{
+  font-family:'Cinzel',serif;font-size:clamp(3.5rem,9vw,7.5rem);
+  font-weight:900;line-height:.88;margin-bottom:.5rem;
+  opacity:0;animation:riseIn .8s .5s forwards;
+  letter-spacing:.05em;
+}
+.ht1{display:block;color:#e8f4ff;text-shadow:0 0 40px rgba(0,200,255,.1);}
+.ht2{display:block;
+  background:linear-gradient(135deg,var(--fire2),var(--fire1),var(--fire3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 20px rgba(255,120,0,.3));}
+.hero-tagline{
+  font-family:'Press Start 2P',monospace;font-size:.6rem;
+  color:var(--bio1);letter-spacing:.16em;min-height:1.4rem;
+  opacity:0;animation:riseIn .7s .7s forwards;margin-bottom:1rem;
+}
+.t-cur{display:inline-block;width:8px;height:.8em;background:var(--bio1);vertical-align:middle;animation:curB .7s step-end infinite;}
+@keyframes curB{0%,100%{opacity:1;}50%{opacity:0;}}
+
+.hero-divider{
+  display:flex;align-items:center;gap:1rem;margin:1rem auto;width:400px;max-width:90%;
+  opacity:0;animation:riseIn .7s .85s forwards;
+}
+.hdiv-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(0,200,255,.3),transparent);}
+.hdiv-gem{
+  width:10px;height:10px;border:1.5px solid var(--bio1);transform:rotate(45deg);
+  box-shadow:0 0 8px rgba(0,200,255,.5);animation:gemPulse 3s ease-in-out infinite;
+}
+@keyframes gemPulse{0%,100%{box-shadow:0 0 8px rgba(0,200,255,.5);}50%{box-shadow:0 0 18px rgba(0,200,255,.9);}}
+
+/* GAME STATS ROW */
+.stat-row{
+  display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;
+  margin-bottom:2rem;
+  opacity:0;animation:riseIn .7s 1s forwards;
+}
+.stat-box{
+  background:var(--panel);border:1px solid rgba(0,200,255,.15);
+  border-radius:3px;padding:10px 16px;text-align:center;
+  position:relative;
+  clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px));
+}
+.stat-box::before{content:'';position:absolute;top:-1px;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--fire2),transparent);}
+.stat-num{font-family:'Rajdhani',sans-serif;font-size:2rem;font-weight:700;
+  background:linear-gradient(135deg,var(--fire2),var(--fire3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;}
+.stat-lbl{font-family:'Press Start 2P',monospace;font-size:.32rem;color:var(--muted);letter-spacing:.1em;margin-top:3px;}
+
+.hero-btns{
+  display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;
+  opacity:0;animation:riseIn .7s 1.15s forwards;
+}
+.btn-start{
+  font-family:'Press Start 2P',monospace;font-size:.58rem;
+  padding:1rem 2.5rem;background:transparent;
+  border:2px solid var(--fire2);color:var(--fire2);
+  cursor:pointer;letter-spacing:.12em;text-transform:uppercase;
+  text-decoration:none;display:inline-block;
+  position:relative;overflow:hidden;transition:all .25s;
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));
+}
+.btn-start::before{content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,150,0,.1),transparent);
+  opacity:0;transition:opacity .25s;}
+.btn-start:hover{color:var(--fire3);border-color:var(--fire3);box-shadow:0 0 25px rgba(255,150,0,.25);}
+.btn-start:hover::before{opacity:1;}
+.btn-ghost-g{
+  font-family:'Press Start 2P',monospace;font-size:.58rem;
+  padding:1rem 2.5rem;background:transparent;
+  border:1px solid rgba(0,200,255,.25);color:var(--bio1);
+  cursor:pointer;letter-spacing:.12em;text-decoration:none;display:inline-block;
+  transition:all .25s;
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));
+}
+.btn-ghost-g:hover{background:rgba(0,200,255,.07);border-color:var(--bio1);box-shadow:0 0 20px rgba(0,200,255,.15);}
+
+.press-start{
+  position:absolute;bottom:100px;left:50%;transform:translateX(-50%);
+  font-family:'Press Start 2P',monospace;font-size:.5rem;
+  color:rgba(200,230,255,.3);letter-spacing:.18em;
+  animation:blinkFast 1.4s step-end infinite;
+}
+@keyframes blinkFast{0%,100%{opacity:.3;}50%{opacity:.8;}}
+
+/* ══════════════════════════════════
+   NAV — GAME MENU BAR
+══════════════════════════════════ */
+nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:500;
+  display:flex;justify-content:center;align-items:center;gap:0;
+  background:rgba(2,8,16,.92);
+  border-top:1px solid rgba(0,200,255,.15);
+  backdrop-filter:blur(16px);
+  padding:.5rem 0;
+}
+.nav-item{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:.4rem 1.8rem;cursor:pointer;
+  border-right:1px solid rgba(255,255,255,.05);
+  text-decoration:none;transition:all .2s;position:relative;
+}
+.nav-item::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--fire2),transparent);
+  transform:scaleX(0);transition:transform .25s;
+}
+.nav-item:hover::before,.nav-item.active::before{transform:scaleX(1);}
+.nav-item:hover,.nav-item.active{background:rgba(0,200,255,.04);}
+.nav-icon{font-size:1rem;}
+.nav-label{font-family:'Press Start 2P',monospace;font-size:.3rem;color:rgba(200,230,255,.35);letter-spacing:.08em;text-transform:uppercase;}
+.nav-item:hover .nav-label,.nav-item.active .nav-label{color:var(--fire2);}
+.nav-item:last-child{border-right:none;}
+
+/* ══════════════════════════════════
+   SECTION WRAPPER
+══════════════════════════════════ */
+section{position:relative;z-index:10;padding:5rem 2rem 4rem;min-height:100vh;}
+@media(max-width:768px){section{padding:4rem 1.2rem 6rem;}}
+.sec-panel{max-width:1060px;margin:0 auto;}
+
+/* SECTION HEADER */
+.sec-head{
+  border:1px solid rgba(0,200,255,.12);
+  background:var(--panel2);
+  padding:1rem 1.5rem;margin-bottom:2rem;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:.5rem;
+  clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));
+}
+.sec-head-left{display:flex;align-items:center;gap:.8rem;}
+.sec-tag{font-family:'Press Start 2P',monospace;font-size:.38rem;
+  background:rgba(0,200,255,.1);border:1px solid rgba(0,200,255,.2);
+  color:var(--bio1);padding:.3rem .7rem;border-radius:2px;letter-spacing:.1em;}
+.sec-title{font-family:'Cinzel',serif;font-size:clamp(1.4rem,3vw,2.2rem);font-weight:900;
+  color:#e8f4ff;letter-spacing:.06em;}
+.sec-title span{
+  background:linear-gradient(135deg,var(--fire2),var(--fire3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.sec-count{font-family:'Press Start 2P',monospace;font-size:.4rem;color:var(--muted);letter-spacing:.1em;}
+
+/* ══════════════════════════════════
+   QUEST CARDS (PROJECTS)
+══════════════════════════════════ */
+#projects .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:1.4rem;}
+
+.quest-card{
+  background:var(--panel);
+  border:1px solid rgba(0,200,255,.1);
+  border-radius:3px;overflow:hidden;position:relative;cursor:default;
+  transition:transform .3s,box-shadow .3s,border-color .3s;
+  clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px));
+}
+.quest-card:hover{
+  transform:translateY(-5px);
+  border-color:rgba(0,200,255,.25);
+  box-shadow:0 16px 40px rgba(0,0,0,.5),0 0 25px rgba(0,200,255,.05);
+}
+/* top accent */
+.quest-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--fire1),var(--bio1));
+  transform:scaleX(0);transform-origin:left;transition:transform .4s;}
+.quest-card:hover::before{transform:scaleX(1);}
+
+.qimg-wrap{position:relative;height:160px;overflow:hidden;}
+.qimg{width:100%;height:100%;object-fit:cover;display:block;
+  filter:brightness(.65) saturate(1.1);transition:filter .4s,transform .4s;}
+.quest-card:hover .qimg{filter:brightness(.82) saturate(1.2);transform:scale(1.04);}
+.qimg-hud{position:absolute;inset:0;
+  background:linear-gradient(to top,var(--dark1) 0%,rgba(2,10,18,.6) 30%,transparent 100%);}
+/* top-right rarity badge */
+.q-rarity{
+  position:absolute;top:8px;right:8px;
+  font-family:'Press Start 2P',monospace;font-size:.32rem;
+  padding:3px 7px;border-radius:2px;letter-spacing:.08em;
+}
+.rar-s{background:rgba(255,200,0,.15);color:var(--gold);border:1px solid rgba(255,200,0,.3);}
+.rar-a{background:rgba(100,180,255,.12);color:#88c8ff;border:1px solid rgba(100,180,255,.25);}
+/* LIVE indicator */
+.q-live{position:absolute;top:8px;left:8px;
+  display:flex;align-items:center;gap:4px;
+  background:rgba(2,10,18,.7);padding:3px 7px;border-radius:2px;
+  font-family:'Press Start 2P',monospace;font-size:.3rem;color:var(--green);}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);
+  animation:livePulse 1.5s ease-in-out infinite;}
+@keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(68,255,136,.4);}70%{opacity:.7;box-shadow:0 0 0 5px rgba(68,255,136,0);}}
+/* stars difficulty */
+.q-stars{position:absolute;bottom:10px;right:8px;
+  font-size:.65rem;letter-spacing:1px;}
+
+.qbody{padding:1.1rem 1.3rem 1.4rem;}
+.qtop{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.4rem;}
+.qname{font-family:'Cinzel',serif;font-size:.88rem;font-weight:700;color:#e8f4ff;letter-spacing:.04em;line-height:1.2;}
+.qplat-col{display:flex;flex-direction:column;gap:.25rem;align-items:flex-end;}
+.qplat{font-family:'Press Start 2P',monospace;font-size:.3rem;padding:.2rem .5rem;border-radius:2px;letter-spacing:.06em;}
+.qp-rb{background:rgba(0,200,255,.08);color:var(--bio1);border:1px solid rgba(0,200,255,.2);}
+.qp-un{background:rgba(255,150,0,.08);color:var(--fire2);border:1px solid rgba(255,150,0,.2);}
+.qp-ios{background:rgba(255,150,0,.06);color:var(--fire3);border:1px solid rgba(255,150,0,.18);}
+.qrole{font-family:'Rajdhani',sans-serif;font-size:.72rem;font-weight:600;
+  color:var(--bio1);letter-spacing:.08em;margin-bottom:.15rem;}
+.qcom{font-family:'Rajdhani',sans-serif;font-size:.68rem;color:rgba(160,220,245,.28);margin-bottom:.6rem;}
+.qcom span{color:rgba(255,180,60,.5);}
+.qdesc{font-family:'Exo 2',sans-serif;font-size:.78rem;color:var(--muted);line-height:1.7;margin-bottom:.9rem;}
+
+/* TAG CHIPS */
+.qtags{display:flex;flex-wrap:wrap;gap:.28rem;margin-bottom:.9rem;}
+.qtag{font-family:'Press Start 2P',monospace;font-size:.28rem;
+  padding:.2rem .5rem;border-radius:2px;
+  background:rgba(255,150,0,.05);color:rgba(255,180,80,.4);
+  border:1px solid rgba(255,150,0,.1);}
+
+/* QUEST FOOTER */
+.qfooter{display:flex;align-items:center;justify-content:space-between;}
+.qlink{
+  font-family:'Press Start 2P',monospace;font-size:.38rem;
+  color:var(--bio1);text-decoration:none;letter-spacing:.08em;
+  display:flex;align-items:center;gap:.4rem;transition:all .2s;
+}
+.qlink:hover{color:var(--bio2);gap:.7rem;}
+.qlink::before{content:'▶';font-size:.3rem;}
+.q-xp{font-family:'Press Start 2P',monospace;font-size:.32rem;color:var(--gold);}
+
+/* ══════════════════════════════════
+   PLAYER STATS (ABOUT / SKILLS)
+══════════════════════════════════ */
+#about .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:2rem;}
+@media(max-width:768px){#about .about-grid{grid-template-columns:1fr;}}
+
+.player-card{
+  background:var(--panel);
+  border:1px solid rgba(0,200,255,.15);
+  padding:1.5rem;
+  clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));
+}
+.pc-header{display:flex;align-items:center;gap:1rem;margin-bottom:1.2rem;
+  padding-bottom:1rem;border-bottom:1px solid rgba(0,200,255,.1);}
+.pc-avatar{
+  width:64px;height:64px;
+  background:linear-gradient(135deg,rgba(0,200,255,.12),rgba(0,80,120,.1));
+  border:1.5px solid rgba(0,200,255,.3);
+  border-radius:3px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Cinzel',serif;font-size:1.4rem;font-weight:700;color:var(--bio1);
+  box-shadow:0 0 20px rgba(0,200,255,.1);flex-shrink:0;
+}
+.pc-info .pc-name{font-family:'Cinzel',serif;font-size:.95rem;font-weight:700;color:#e8f4ff;letter-spacing:.06em;}
+.pc-info .pc-class{font-family:'Press Start 2P',monospace;font-size:.35rem;color:var(--fire2);letter-spacing:.08em;margin:.3rem 0;}
+.pc-info .pc-guild{font-family:'Rajdhani',sans-serif;font-size:.72rem;color:var(--bio1);opacity:.7;}
+
+.stat-table{display:flex;flex-direction:column;gap:.6rem;}
+.stat-line{display:flex;align-items:center;gap:.6rem;}
+.stat-icon{font-size:.85rem;width:20px;text-align:center;flex-shrink:0;}
+.stat-key{font-family:'Press Start 2P',monospace;font-size:.3rem;color:var(--muted);width:70px;flex-shrink:0;letter-spacing:.06em;}
+.stat-track{flex:1;height:8px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden;position:relative;}
+.stat-fill{height:100%;border-radius:2px;width:0;transition:width 1.3s cubic-bezier(.4,0,.2,1);position:relative;}
+.stat-fill::after{content:'';position:absolute;right:0;top:0;bottom:0;width:3px;
+  background:rgba(255,255,255,.6);border-radius:2px;}
+.sf-fire{background:linear-gradient(90deg,var(--fire1),var(--fire3));}
+.sf-bio{background:linear-gradient(90deg,var(--bio1),var(--bio2));}
+.sf-both{background:linear-gradient(90deg,var(--fire2),var(--bio1));}
+.sf-gold{background:linear-gradient(90deg,var(--gold),var(--fire3));}
+.stat-pct{font-family:'Press Start 2P',monospace;font-size:.32rem;color:var(--fire2);width:28px;text-align:right;}
+
+.codex-panel{
+  background:var(--panel);
+  border:1px solid rgba(255,150,0,.12);
+  padding:1.5rem;
+  clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));
+}
+.codex-entry{display:flex;align-items:flex-start;gap:.7rem;
+  padding:.65rem 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.codex-entry:last-child{border-bottom:none;}
+.ce-icon{width:32px;height:32px;flex-shrink:0;
+  background:rgba(255,150,0,.08);border:1px solid rgba(255,150,0,.15);
+  border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:.85rem;}
+.ce-title{font-family:'Cinzel',serif;font-size:.72rem;font-weight:600;color:#e8f4ff;margin-bottom:2px;letter-spacing:.04em;}
+.ce-text{font-family:'Exo 2',sans-serif;font-size:.7rem;color:var(--muted);line-height:1.6;}
+
+/* ══════════════════════════════════
+   CONTACT — SEND RAVEN
+══════════════════════════════════ */
+#contact .contact-inner{max-width:560px;margin:0 auto;}
+.raven-box{
+  background:var(--panel);
+  border:1px solid rgba(0,200,255,.15);
+  padding:2rem;margin-top:1.5rem;position:relative;
+  clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));
+}
+.raven-box::before{content:'';position:absolute;top:0;left:15%;right:15%;height:1.5px;
+  background:linear-gradient(90deg,transparent,var(--fire2),var(--bio1),transparent);}
+.rb-profile{display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;
+  padding-bottom:1rem;border-bottom:1px solid rgba(0,200,255,.08);}
+.rb-avatar{width:56px;height:56px;
+  background:linear-gradient(135deg,rgba(0,200,255,.12),rgba(0,80,120,.1));
+  border:1.5px solid rgba(0,200,255,.25);
+  border-radius:3px;display:flex;align-items:center;justify-content:center;
+  font-family:'Cinzel',serif;font-size:1.1rem;font-weight:700;color:var(--bio1);}
+.rb-name{font-family:'Cinzel',serif;font-size:.95rem;font-weight:700;color:#e8f4ff;letter-spacing:.06em;}
+.rb-class{font-family:'Press Start 2P',monospace;font-size:.32rem;color:var(--fire2);letter-spacing:.08em;margin:.3rem 0;}
+.rb-guild{font-family:'Rajdhani',sans-serif;font-size:.72rem;color:var(--bio1);opacity:.65;}
+.rb-links{display:flex;flex-direction:column;gap:.6rem;}
+.rb-link{
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(255,255,255,.025);
+  border:1px solid rgba(0,200,255,.07);
+  padding:.75rem 1rem;text-decoration:none;transition:all .22s;
+  clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px));
+  position:relative;overflow:hidden;
+}
+.rb-link::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;
+  background:linear-gradient(180deg,var(--fire1),var(--bio1));
+  transform:scaleY(0);transform-origin:bottom;transition:transform .28s;}
+.rb-link:hover::before{transform:scaleY(1);}
+.rb-link:hover{border-color:rgba(0,200,255,.18);background:rgba(0,200,255,.04);transform:translateX(3px);}
+.rb-left{display:flex;align-items:center;gap:.65rem;}
+.rb-ico{width:30px;height:30px;background:rgba(0,200,255,.07);border:1px solid rgba(0,200,255,.1);
+  border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:.82rem;}
+.rb-lbl{font-family:'Cinzel',serif;font-size:.6rem;font-weight:600;color:#e8f4ff;letter-spacing:.1em;}
+.rb-val{font-family:'Rajdhani',sans-serif;font-size:.7rem;color:var(--muted);}
+.rb-arr{color:var(--bio1);opacity:.4;font-size:.8rem;transition:all .2s;}
+.rb-link:hover .rb-arr{opacity:1;color:var(--fire2);transform:translateX(2px);}
+
+/* ══════════════════════════════════
+   FOOTER HUD BAR
+══════════════════════════════════ */
+.footer-hud{position:relative;z-index:10;
+  border-top:1px solid rgba(0,200,255,.07);
+  padding:.6rem 2rem;
+  display:flex;justify-content:space-between;align-items:center;
+  background:rgba(2,8,16,.85);
+  margin-bottom:52px;}
+.fhud-text{font-family:'Press Start 2P',monospace;font-size:.32rem;color:rgba(200,230,255,.2);letter-spacing:.1em;}
+
+/* ══════════════════════════════════
+   FILTER ROW
+══════════════════════════════════ */
+.filt-row{display:flex;gap:.5rem;margin-bottom:1.5rem;flex-wrap:wrap;}
+.filt{font-family:'Press Start 2P',monospace;font-size:.35rem;
+  padding:.35rem .9rem;border-radius:2px;
+  border:1px solid rgba(0,200,255,.12);background:transparent;
+  color:rgba(0,200,255,.38);cursor:pointer;letter-spacing:.08em;text-transform:uppercase;transition:all .22s;}
+.filt.on,.filt:hover{border-color:var(--bio1);color:var(--bio1);background:rgba(0,200,255,.06);}
+
+/* ══════════════════════════════════
+   MISC
+══════════════════════════════════ */
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .65s,transform .65s;}
+.reveal.vis{opacity:1;transform:none;}
+@keyframes riseIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:none;}}
+</style>
+</head>
+<body>
+
+<!-- ══ LOADING SCREEN ══ -->
+<div id="loader">
+  <div class="loader-logo">AHSAN HUNAIN</div>
+  <div class="loader-sub">GAME DEVELOPER · PORTFOLIO</div>
+  <div class="load-bar-wrap"><div class="load-bar"></div></div>
+  <div class="load-text" id="loadTxt">LOADING...</div>
+  <div class="load-percent" id="loadPct">0%</div>
+</div>
+
+<!-- ══ SKY WORLD ══ -->
+<div class="sky-wrap">
+  <div class="sky-base"></div>
+  <div class="scale-tex"></div>
+  <div class="aurora-wrap"><div class="aur aur1"></div><div class="aur aur2"></div></div>
+  <div class="star-field" id="sf"></div>
+</div>
+<canvas id="cvEmber"></canvas>
+<canvas id="cvBio"></canvas>
+
+<!-- SVG Mountains -->
+<svg class="mountains" viewBox="0 0 1440 320" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="mg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#091624"/><stop offset="100%" stop-color="#020c14"/></linearGradient>
+    <linearGradient id="mg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#07111e"/><stop offset="100%" stop-color="#010a12"/></linearGradient>
+  </defs>
+  <path d="M0,220 L80,140 L180,195 L270,110 L380,175 L470,90 L570,165 L670,80 L770,160 L870,95 L970,170 L1070,105 L1170,175 L1270,120 L1360,170 L1440,130 L1440,320 L0,320Z" fill="url(#mg2)" opacity=".8"/>
+  <path d="M0,255 L70,195 L155,235 L240,170 L330,220 L420,155 L510,210 L600,140 L690,205 L780,155 L870,215 L960,160 L1050,220 L1140,170 L1230,220 L1320,175 L1440,200 L1440,320 L0,320Z" fill="url(#mg1)"/>
+  <path d="M0,255 L70,195 L155,235 L240,170 L330,220 L420,155 L510,210 L600,140 L690,205 L780,155 L870,215 L960,160 L1050,220 L1140,170 L1230,220 L1320,175 L1440,200" fill="none" stroke="rgba(0,200,255,.1)" stroke-width="1"/>
+  <ellipse cx="720" cy="320" rx="380" ry="45" fill="rgba(0,200,255,.05)"/>
+</svg>
+
+<!-- ══ PERSISTENT HUD ══ -->
+<div class="hud-player">
+  <div class="hp-row">
+    <div class="hud-avatar">A</div>
+    <div class="hud-name-block">
+      <div class="hud-name">AHSAN HUNAIN</div>
+      <div class="hud-class">GAME BACKEND DEV</div>
+    </div>
+    <div class="hud-lvl">LV.99</div>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label" style="color:#ff6666;">HP</span>
+    <div class="bar-track"><div class="bar-fill bar-hp" style="width:88%"></div></div>
+    <span class="bar-val" style="color:#ff9999;">880/1000</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label" style="color:#44ccff;">MP</span>
+    <div class="bar-track"><div class="bar-fill bar-mp" style="width:92%"></div></div>
+    <span class="bar-val" style="color:#88ddff;">920/1000</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label" style="color:#f0c040;">XP</span>
+    <div class="bar-track"><div class="bar-fill bar-xp" style="width:65%"></div></div>
+    <span class="bar-val" style="color:#f8d870;">6500/10K</span>
+  </div>
+</div>
+
+<div class="hud-quest">
+  <div class="quest-title">📜 ACTIVE QUESTS</div>
+  <div class="quest-item"><span class="q-check q-done">✓</span><div class="q-text">Ship 4 Roblox games</div></div>
+  <div class="quest-item"><span class="q-check q-done">✓</span><div class="q-text">Publish 2 iOS apps</div></div>
+  <div class="quest-item"><span class="q-check q-active">▶</span><div class="q-text">Join Metaverse Creators Tokyo</div></div>
+  <div class="quest-item"><span class="q-check q-todo">○</span><div class="q-text">Find next big project</div></div>
+</div>
+
+<div class="hud-area">AREA: BERK · DRAGON ISLE</div>
+<div class="hud-compass">
+  <div class="compass-inner">
+    <div class="compass-n">N</div>
+    <div class="compass-s">S</div>
+    <div class="compass-e">E</div>
+    <div class="compass-w">W</div>
+    <div class="compass-needle"></div>
+  </div>
+</div>
+
+<div class="hud-controls">
+  <div class="ctrl"><span class="ctrl-key">SCROLL</span><span class="ctrl-lbl">Navigate</span></div>
+  <div class="ctrl"><span class="ctrl-key">CLICK</span><span class="ctrl-lbl">Select</span></div>
+  <div class="ctrl"><span class="ctrl-key">ESC</span><span class="ctrl-lbl">Menu</span></div>
+</div>
+
+<!-- ACHIEVEMENT POPUP -->
+<div class="achievement" id="ach">
+  <div class="ach-icon">🏆</div>
+  <div><div class="ach-title">ACHIEVEMENT UNLOCKED</div><div class="ach-text" id="achText">Portfolio Discovered!</div></div>
+</div>
+
+<!-- ══ MAIN NAV ══ -->
+<nav>
+  <a href="#hero" class="nav-item active" onclick="setNav(this)"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></a>
+  <a href="#projects" class="nav-item" onclick="setNav(this)"><span class="nav-icon">⚔️</span><span class="nav-label">Quests</span></a>
+  <a href="#about" class="nav-item" onclick="setNav(this)"><span class="nav-icon">📊</span><span class="nav-label">Stats</span></a>
+  <a href="#contact" class="nav-item" onclick="setNav(this)"><span class="nav-icon">📮</span><span class="nav-label">Raven</span></a>
+</nav>
+
+<!-- ══ CONTENT ══ -->
+<div class="content">
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-eyebrow" style="opacity:0;animation:riseIn .7s .3s forwards;">◈ GAME BACKEND DEVELOPER ◈</div>
+  <h1 class="hero-title"><span class="ht1">AHSAN</span><span class="ht2">HUNAIN</span></h1>
+  <div class="hero-tagline" id="typed"></div>
+  <div class="hero-divider"><div class="hdiv-line"></div><div class="hdiv-gem"></div><div class="hdiv-line"></div></div>
+  <div class="stat-row">
+    <div class="stat-box"><div class="stat-num" data-to="6">0</div><div class="stat-lbl">GAMES SHIPPED</div></div>
+    <div class="stat-box"><div class="stat-num" data-to="2">0</div><div class="stat-lbl">APP STORE</div></div>
+    <div class="stat-box"><div class="stat-num" data-to="4">0</div><div class="stat-lbl">ON ROBLOX</div></div>
+    <div class="stat-box"><div class="stat-num" data-to="2">0</div><div class="stat-lbl">ENGINES</div></div>
+  </div>
+  <div class="hero-btns">
+    <a href="#projects" class="btn-start">▶ View Quests</a>
+    <a href="#contact" class="btn-ghost-g">◈ Send Raven</a>
+  </div>
+  <div class="press-start">▼ SCROLL TO EXPLORE ▼</div>
+</section>
+
+<!-- PROJECTS -->
+<section id="projects">
+  <div class="sec-panel">
+    <div class="sec-head reveal">
+      <div class="sec-head-left">
+        <span class="sec-tag">⚔️ QUEST LOG</span>
+        <h2 class="sec-title">Completed <span>Chronicles</span></h2>
+      </div>
+      <span class="sec-count">6 QUESTS · ALL VERIFIED</span>
+    </div>
+    <div class="filt-row reveal">
+      <button class="filt on" onclick="fp('all',this)">ALL (6)</button>
+      <button class="filt" onclick="fp('rb',this)">ROBLOX (4)</button>
+      <button class="filt" onclick="fp('un',this)">UNITY · iOS (2)</button>
+    </div>
+    <div class="pgrid">
+
+      <div class="quest-card reveal" data-t="rb">
+        <div class="qimg-wrap">
+          <img class="qimg" src="https://picsum.photos/seed/zombie-escape-hud/640/320" alt="">
+          <div class="qimg-hud"></div>
+          <div class="q-live"><div class="live-dot"></div>LIVE</div>
+          <div class="q-rarity rar-s">S-RANK</div>
+          <div class="q-stars">🔥🔥🔥🔥🔥</div>
+        </div>
+        <div class="qbody">
+          <div class="qtop"><div class="qname">Last Town<br>Zombie Escape</div><div class="qplat-col"><span class="qplat qp-rb">ROBLOX</span></div></div>
+          <div class="qrole">Backend Developer</div>
+          <div class="qcom">Guild: <span>LASTTOWN29</span></div>
+          <p class="qdesc">Wave spawn systems, survival tracking, round management, server-side hit detection. Full multiplayer backend.</p>
+          <div class="qtags"><span class="qtag">LUAU</span><span class="qtag">MULTIPLAYER</span><span class="qtag">WAVE SYSTEM</span></div>
+          <div class="qfooter">
+            <a href="https://www.roblox.com/games/85958529399721/UPD-LAST-TOWN-Zombie-Escape" target="_blank" class="qlink">PLAY NOW</a>
+            <span class="q-xp">+1200 XP</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="quest-card reveal" data-t="rb">
+        <div class="qimg-wrap">
+          <img class="qimg" src="https://picsum.photos/seed/monster-dragon-hud/640/320" alt="">
+          <div class="qimg-hud"></div>
+          <div class="q-live"><div class="live-dot"></div>LIVE</div>
+          <div class="q-rarity rar-s">S-RANK</div>
+          <div class="q-stars">🔥🔥🔥🔥🔥</div>
+        </div>
+        <div class="qbody">
+          <div class="qtop"><div class="qname">Find &amp; Evolve<br>Monsters</div><div class="qplat-col"><span class="qplat qp-rb">ROBLOX</span></div></div>
+          <div class="qrole">Backend Developer</div>
+          <div class="qcom">Guild: <span>KANJI MONSTERS</span></div>
+          <p class="qdesc">Creature data architecture, evolution logic tree, progression tracking, DataStore persistence.</p>
+          <div class="qtags"><span class="qtag">LUAU</span><span class="qtag">EVOLUTION</span><span class="qtag">DATASTORES</span></div>
+          <div class="qfooter">
+            <a href="https://www.roblox.com/games/104146074760099/Find-Evolve-MONSTERS" target="_blank" class="qlink">PLAY NOW</a>
+            <span class="q-xp">+1100 XP</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="quest-card reveal" data-t="rb">
+        <div class="qimg-wrap">
+          <img class="qimg" src="https://picsum.photos/seed/energy-tycoon-hud/640/320" alt="">
+          <div class="qimg-hud"></div>
+          <div class="q-live"><div class="live-dot"></div>LIVE</div>
+          <div class="q-rarity rar-a">A-RANK</div>
+          <div class="q-stars">🔥🔥🔥🔥</div>
+        </div>
+        <div class="qbody">
+          <div class="qtop"><div class="qname">Octopus Energy<br>Tycoon</div><div class="qplat-col"><span class="qplat qp-rb">ROBLOX</span></div></div>
+          <div class="qrole">Backend Developer</div>
+          <div class="qcom">Guild: <span>Metaverse Creators Tokyo</span></div>
+          <p class="qdesc">Economy systems, resource generation loop, building logic, player DataStores.</p>
+          <div class="qtags"><span class="qtag">LUAU</span><span class="qtag">ECONOMY</span><span class="qtag">TYCOON</span></div>
+          <div class="qfooter">
+            <a href="https://www.roblox.com/games/114201343561910/Octopus-Energy-Tycoon" target="_blank" class="qlink">PLAY NOW</a>
+            <span class="q-xp">+900 XP</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="quest-card reveal" data-t="rb">
+        <div class="qimg-wrap">
+          <img class="qimg" src="https://picsum.photos/seed/zombie-story-hud/640/320" alt="">
+          <div class="qimg-hud"></div>
+          <div class="q-live"><div class="live-dot"></div>BETA</div>
+          <div class="q-rarity rar-a">A-RANK</div>
+          <div class="q-stars">🔥🔥🔥🔥</div>
+        </div>
+        <div class="qbody">
+          <div class="qtop"><div class="qname">99 Days<br>Zombie Story</div><div class="qplat-col"><span class="qplat qp-rb">ROBLOX</span></div></div>
+          <div class="qrole">Backend Developer</div>
+          <div class="qcom">Guild: <span>LASTTOWN29</span></div>
+          <p class="qdesc">Chapter/day progression, event triggers, cutscene sequencing, player state persistence.</p>
+          <div class="qtags"><span class="qtag">LUAU</span><span class="qtag">STORY SYS</span><span class="qtag">TRIGGERS</span></div>
+          <div class="qfooter">
+            <a href="https://www.roblox.com/games/77487145790598/99-days-Zombie-beta" target="_blank" class="qlink">PLAY NOW</a>
+            <span class="q-xp">+850 XP</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="quest-card reveal" data-t="un">
+        <div class="qimg-wrap">
+          <img class="qimg" src="https://picsum.photos/seed/abc-game-hud/640/320" alt="">
+          <div class="qimg-hud"></div>
+          <div class="q-live"><div class="live-dot"></div>APP STORE</div>
+          <div class="q-rarity rar-s">S-RANK</div>
+          <div class="q-stars">🔥🔥🔥🔥🔥</div>
+        </div>
+        <div class="qbody">
+          <div class="qtop"><div class="qname">Endless Alphabet<br>ABC Games</div><div class="qplat-col"><span class="qplat qp-un">UNITY</span><span class="qplat qp-ios">iOS</span></div></div>
+          <div class="qrole">C# Game Developer</div>
+          <div class="qcom">Client: <span>Javeria Afzal</span> · Ages 4+</div>
+          <p class="qdesc">32 mini-games, state machines, scene flow, letter recognition systems. 10+ versions shipped to App Store.</p>
+          <div class="qtags"><span class="qtag">C#</span><span class="qtag">UNITY 2D</span><span class="qtag">32 GAMES</span></div>
+          <div class="qfooter">
+            <a href="https://apps.apple.com/pk/app/endless-alphabet-abc-games/id6740021718" target="_blank" class="qlink">APP STORE</a>
+            <span class="q-xp">+1400 XP</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="quest-card reveal" data-t="un">
+        <div class="qimg-wrap">
+          <img class="qimg" src="https://picsum.photos/seed/tracing-game-hud/640/320" alt="">
+          <div class="qimg-hud"></div>
+          <div class="q-live"><div class="live-dot"></div>APP STORE</div>
+          <div class="q-rarity rar-s">S-RANK</div>
+          <div class="q-stars">🔥🔥🔥🔥🔥</div>
+        </div>
+        <div class="qbody">
+          <div class="qtop"><div class="qname">Alphabet Letter<br>Tracing</div><div class="qplat-col"><span class="qplat qp-un">UNITY</span><span class="qplat qp-ios">iOS</span></div></div>
+          <div class="qrole">C# Game Developer</div>
+          <div class="qcom">Client: <span>Javeria Afzal</span> · Ages 4+</div>
+          <p class="qdesc">Underwater ABC adventure — 6 game modes, touch input, 9+ update cycles shipped to iOS App Store.</p>
+          <div class="qtags"><span class="qtag">C#</span><span class="qtag">TOUCH INPUT</span><span class="qtag">6 MODES</span></div>
+          <div class="qfooter">
+            <a href="https://apps.apple.com/pk/app/alphabet-letter-tracing/id6748381550" target="_blank" class="qlink">APP STORE</a>
+            <span class="q-xp">+1300 XP</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT / PLAYER STATS -->
+<section id="about">
+  <div class="sec-panel">
+    <div class="sec-head reveal">
+      <div class="sec-head-left">
+        <span class="sec-tag">📊 PLAYER STATS</span>
+        <h2 class="sec-title">Character <span>Profile</span></h2>
+      </div>
+    </div>
+    <div class="about-grid">
+      <div class="player-card reveal">
+        <div class="pc-header">
+          <div class="pc-avatar">A</div>
+          <div class="pc-info">
+            <div class="pc-name">AHSAN HUNAIN</div>
+            <div class="pc-class">◈ BACKEND GAME DEV</div>
+            <div class="pc-guild">🌏 Metaverse Creators Tokyo</div>
+          </div>
+        </div>
+        <div class="stat-table">
+          <div class="stat-line">
+            <span class="stat-icon">⚔️</span>
+            <span class="stat-key">C# / UNITY</span>
+            <div class="stat-track"><div class="stat-fill sf-fire" data-w="88"></div></div>
+            <span class="stat-pct">88</span>
+          </div>
+          <div class="stat-line">
+            <span class="stat-icon">🏹</span>
+            <span class="stat-key">LUA / ROBLOX</span>
+            <div class="stat-track"><div class="stat-fill sf-bio" data-w="85"></div></div>
+            <span class="stat-pct">85</span>
+          </div>
+          <div class="stat-line">
+            <span class="stat-icon">🛡️</span>
+            <span class="stat-key">GAME SYSTEMS</span>
+            <div class="stat-track"><div class="stat-fill sf-both" data-w="92"></div></div>
+            <span class="stat-pct">92</span>
+          </div>
+          <div class="stat-line">
+            <span class="stat-icon">⚡</span>
+            <span class="stat-key">UNITY ENGINE</span>
+            <div class="stat-track"><div class="stat-fill sf-fire" data-w="85"></div></div>
+            <span class="stat-pct">85</span>
+          </div>
+          <div class="stat-line">
+            <span class="stat-icon">🔮</span>
+            <span class="stat-key">MULTIPLAYER</span>
+            <div class="stat-track"><div class="stat-fill sf-bio" data-w="80"></div></div>
+            <span class="stat-pct">80</span>
+          </div>
+          <div class="stat-line">
+            <span class="stat-icon">📱</span>
+            <span class="stat-key">MOBILE iOS</span>
+            <div class="stat-track"><div class="stat-fill sf-gold" data-w="80"></div></div>
+            <span class="stat-pct">80</span>
+          </div>
+        </div>
+      </div>
+      <div class="codex-panel reveal">
+        <div class="sec-tag" style="display:inline-block;margin-bottom:1rem;">📖 DRAGON CODEX</div>
+        <div class="codex-entry">
+          <div class="ce-icon">⚙️</div>
+          <div><div class="ce-title">Game Systems Architect</div><div class="ce-text">Economy, inventory, progression, round logic — the backend mechanics that give games depth and keep players coming back.</div></div>
+        </div>
+        <div class="codex-entry">
+          <div class="ce-icon">🔗</div>
+          <div><div class="ce-title">Multiplayer Engineer</div><div class="ce-text">Server-client architecture on Roblox. RemoteEvents, state sync, hit detection, anti-exploit logic that holds under real players.</div></div>
+        </div>
+        <div class="codex-entry">
+          <div class="ce-icon">💾</div>
+          <div><div class="ce-title">Data Persistence Master</div><div class="ce-text">Player saves, DataStores, leaderboards, and session handling that survive crashes and server restarts.</div></div>
+        </div>
+        <div class="codex-entry">
+          <div class="ce-icon">📱</div>
+          <div><div class="ce-title">Unity Mobile Shipper</div><div class="ce-text">2D game development in C# — state machines, touch input, scene management, 10+ App Store release cycles.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT / RAVEN -->
+<section id="contact">
+  <div class="sec-panel">
+    <div class="sec-head reveal">
+      <div class="sec-head-left">
+        <span class="sec-tag">📮 SEND RAVEN</span>
+        <h2 class="sec-title">Start a <span>New Quest</span></h2>
+      </div>
+    </div>
+    <div class="contact-inner">
+      <div class="raven-box reveal">
+        <div class="rb-profile">
+          <div class="rb-avatar">A</div>
+          <div>
+            <div class="rb-name">AHSAN HUNAIN</div>
+            <div class="rb-class">◈ GAME BACKEND DEVELOPER</div>
+            <div class="rb-guild">🌏 Metaverse Creators Tokyo · Open to new quests</div>
+          </div>
+        </div>
+        <div class="rb-links">
+          <a href="mailto:ahsanhunain@email.com" class="rb-link">
+            <div class="rb-left"><div class="rb-ico">✉️</div><div><div class="rb-lbl">EMAIL</div><div class="rb-val">ahsanhunain@email.com</div></div></div>
+            <span class="rb-arr">→</span>
+          </a>
+          <a href="https://www.roblox.com" target="_blank" class="rb-link">
+            <div class="rb-left"><div class="rb-ico">🎮</div><div><div class="rb-lbl">ROBLOX</div><div class="rb-val">@AhsanHunain</div></div></div>
+            <span class="rb-arr">→</span>
+          </a>
+          <a href="#" class="rb-link">
+            <div class="rb-left"><div class="rb-ico">💻</div><div><div class="rb-lbl">GITHUB</div><div class="rb-val">github.com/ahsanhunain</div></div></div>
+            <span class="rb-arr">→</span>
+          </a>
+          <a href="#" class="rb-link">
+            <div class="rb-left"><div class="rb-ico">💬</div><div><div class="rb-lbl">DISCORD</div><div class="rb-val">ahsanhunain#0001</div></div></div>
+            <span class="rb-arr">→</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="footer-hud">
+  <span class="fhud-text">◈ AHSAN HUNAIN · GAME BACKEND DEV · 2025</span>
+  <span class="fhud-text">BERK SERVER · ONLINE · PING: 12MS</span>
+</div>
+
+</div><!-- end content -->
+
+<script>
+/* ── STARS ── */
+const sfd=document.getElementById('sf');
+for(let i=0;i<200;i++){
+  const s=document.createElement('div');
+  const sz=Math.random()*2+.5,op=Math.random()*.5+.1;
+  s.style.cssText=`position:absolute;border-radius:50%;background:#fff;width:${sz}px;height:${sz}px;top:${Math.random()*70}%;left:${Math.random()*100}%;opacity:${op};animation:curB ${2+Math.random()*4}s ${Math.random()*4}s ease-in-out infinite;`;
+  sfd.appendChild(s);
+}
+
+/* ── EMBERS ── */
+const ec=document.getElementById('cvEmber'),ectx=ec.getContext('2d');
+let EW,EH;
+function resE(){EW=ec.width=window.innerWidth;EH=ec.height=window.innerHeight;}resE();window.addEventListener('resize',resE);
+class Ember{
+  constructor(){this.reset();}
+  reset(){this.x=Math.random()*EW;this.y=EH+10;this.vx=(Math.random()-.5)*1.2;this.vy=-(Math.random()*2.5+1.5);this.size=Math.random()*2.5+.8;this.life=0;this.maxLife=Math.random()*140+80;const t=Math.random();t<.5?(this.r=255,this.g=Math.floor(100+Math.random()*80),this.b=0):(this.r=255,this.g=Math.floor(180+Math.random()*60),this.b=Math.floor(Math.random()*50));}
+  update(){this.x+=this.vx+(Math.random()-.5)*.4;this.y+=this.vy;this.life++;if(this.life>this.maxLife||this.y<-20)this.reset();}
+  draw(){const p=this.life/this.maxLife,a=Math.sin(p*Math.PI)*.7;const g=ectx.createRadialGradient(this.x,this.y,0,this.x,this.y,this.size*3);g.addColorStop(0,`rgba(${this.r},${this.g},${this.b},${a})`);g.addColorStop(1,`rgba(${this.r},${this.g},${this.b},0)`);ectx.beginPath();ectx.arc(this.x,this.y,this.size*3,0,Math.PI*2);ectx.fillStyle=g;ectx.fill();ectx.beginPath();ectx.arc(this.x,this.y,this.size*.4,0,Math.PI*2);ectx.fillStyle=`rgba(255,240,200,${a*.9})`;ectx.fill();}
+}
+const embers=[];for(let i=0;i<60;i++){const e=new Ember();e.life=Math.random()*e.maxLife;embers.push(e);}
+
+/* ── BIO PARTICLES ── */
+const bc=document.getElementById('cvBio'),bctx=bc.getContext('2d');
+let BW,BH;
+function resB(){BW=bc.width=window.innerWidth;BH=bc.height=window.innerHeight;}resB();window.addEventListener('resize',resB);
+class Bio{
+  constructor(){this.reset();}
+  reset(){this.x=Math.random()*BW;this.y=BH*.5+Math.random()*BH*.5;this.tx=this.x+(Math.random()-.5)*300;this.ty=this.y+(Math.random()-.5)*200;this.life=0;this.maxLife=Math.random()*200+100;this.size=Math.random()*3+1;const t=Math.random();t<.65?(this.r=0,this.g=Math.floor(180+Math.random()*70),this.b=255):(this.r=0,this.g=255,this.b=Math.floor(200+Math.random()*55));}
+  update(){this.x+=(this.tx-this.x)*.006;this.y+=(this.ty-this.y)*.006;this.life++;if(this.life>this.maxLife)this.reset();}
+  draw(){const p=this.life/this.maxLife,a=Math.sin(p*Math.PI)*.45;const g=bctx.createRadialGradient(this.x,this.y,0,this.x,this.y,this.size*5);g.addColorStop(0,`rgba(${this.r},${this.g},${this.b},${a})`);g.addColorStop(1,`rgba(${this.r},${this.g},${this.b},0)`);bctx.beginPath();bctx.arc(this.x,this.y,this.size*5,0,Math.PI*2);bctx.fillStyle=g;bctx.fill();bctx.beginPath();bctx.arc(this.x,this.y,this.size*.4,0,Math.PI*2);bctx.fillStyle=`rgba(180,250,255,${a*.8})`;bctx.fill();}
+}
+const bios=[];for(let i=0;i<55;i++){const b=new Bio();b.life=Math.random()*b.maxLife;bios.push(b);}
+
+(function loop(){
+  ectx.clearRect(0,0,EW,EH);embers.forEach(e=>{e.update();e.draw();});
+  bctx.clearRect(0,0,BW,BH);bios.forEach(b=>{b.update();b.draw();});
+  requestAnimationFrame(loop);
+})();
+
+/* ── LOADER ── */
+let pct=0;
+const pInterval=setInterval(()=>{
+  pct+=Math.floor(Math.random()*8+2);if(pct>100)pct=100;
+  document.getElementById('loadPct').textContent=pct+'%';
+  if(pct>=100){clearInterval(pInterval);setTimeout(()=>{document.getElementById('loader').classList.add('out');setTimeout(()=>{document.getElementById('loader').style.display='none';showAch('Portfolio Discovered!',0);},800);},400);}
+},80);
+
+/* ── ACHIEVEMENT ── */
+function showAch(text,delay){
+  document.getElementById('achText').textContent=text;
+  const el=document.getElementById('ach');
+  setTimeout(()=>{el.classList.add('show');setTimeout(()=>el.classList.remove('show'),3500);},delay||0);
+}
+
+/* ── TYPEWRITER ── */
+const lines=['C# · Lua · Unity · Roblox','GAME BACKEND DEVELOPER','6 QUESTS COMPLETED','METAVERSE CREATORS TOKYO'];
+let li=0,ci=0,del=false;const tel=document.getElementById('typed');
+function type(){const w=lines[li];if(!del){tel.innerHTML=w.slice(0,ci+1)+'<span class="t-cur"></span>';ci++;if(ci===w.length){setTimeout(()=>{del=true;tick();},2400);return;}else{tel.innerHTML=w.slice(0,ci-1)+'<span class="t-cur"></span>';ci--;if(ci===0){del=false;li=(li+1)%lines.length;setTimeout(tick,500);return;}}setTimeout(tick,del?30:68);}else{tel.innerHTML=w.slice(0,ci-1)+'<span class="t-cur"></span>';ci--;if(ci===0){del=false;li=(li+1)%lines.length;setTimeout(tick,500);return;}setTimeout(tick,30);}}
+function tick(){type();}setTimeout(tick,2000);
+
+/* ── COUNTERS ── */
+setTimeout(()=>{document.querySelectorAll('[data-to]').forEach(el=>{const t=+el.dataset.to;let c=0;const iv=setInterval(()=>{c+=.2;if(c>=t){c=t;clearInterval(iv);}el.textContent=Math.floor(c);},35);});},1600);
+
+/* ── SCROLL REVEAL + ACHIEVEMENTS ── */
+const achs={projects:'Quest Log Accessed!',about:'Player Stats Unlocked!',contact:'Raven Service Available!'};
+const ro=new IntersectionObserver(es=>{
+  es.forEach((e,i)=>{
+    if(e.isIntersecting){
+      setTimeout(()=>e.target.classList.add('vis'),i*80);ro.unobserve(e.target);
+    }
+  });
+},{threshold:.07});
+document.querySelectorAll('.reveal').forEach(el=>ro.observe(el));
+
+const secObs=new IntersectionObserver(es=>{
+  es.forEach(e=>{if(e.isIntersecting&&achs[e.target.id]){showAch(achs[e.target.id]);secObs.unobserve(e.target);}});
+},{threshold:.3});
+['projects','about','contact'].forEach(id=>{const el=document.getElementById(id);if(el)secObs.observe(el);});
+
+/* ── SKILL BARS ── */
+const so=new IntersectionObserver(es=>{
+  es.forEach(e=>{if(e.isIntersecting){e.target.querySelectorAll('.stat-fill,.sk-fill').forEach(b=>setTimeout(()=>{b.style.width=b.dataset.w+'%';},200));so.unobserve(e.target);}});
+},{threshold:.2});
+document.querySelectorAll('.player-card,.skill-list').forEach(el=>so.observe(el));
+
+/* ── CARD TILT ── */
+document.querySelectorAll('.quest-card').forEach(c=>{
+  c.addEventListener('mousemove',e=>{const r=c.getBoundingClientRect();const x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;c.style.transform=`translateY(-5px) perspective(700px) rotateX(${-y*4}deg) rotateY(${x*4}deg)`;c.style.transition='transform .05s';});
+  c.addEventListener('mouseleave',()=>{c.style.transform='';c.style.transition='transform .5s';});
+});
+
+/* ── NAV ── */
+function setNav(el){document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));el.classList.add('active');}
+
+/* ── FILTER ── */
+function fp(t,btn){document.querySelectorAll('.filt').forEach(b=>b.classList.remove('on'));btn.classList.add('on');document.querySelectorAll('.quest-card').forEach(c=>{c.style.display=(t==='all'||c.dataset.t===t)?'':'none';});}
+</script>
+</body>
+</html>
