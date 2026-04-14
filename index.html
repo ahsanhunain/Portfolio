@@ -23,9 +23,27 @@
 html{scroll-behavior:smooth;}
 body{background:var(--bg1);color:var(--text);font-family:'IM Fell English',serif;overflow-x:hidden;cursor:none;}
 
-/* CURSOR */
-.cur{position:fixed;width:10px;height:10px;background:var(--amber2);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);mix-blend-mode:screen;transition:transform .08s,background .2s;}
-.cur-ring{position:fixed;width:28px;height:28px;border:1px solid rgba(232,130,10,0.4);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:all .14s;mix-blend-mode:screen;}
+/* CURSOR — medieval sword */
+body{cursor:none;}
+.cur-sword{position:fixed;pointer-events:none;z-index:9999;width:32px;height:32px;transform:translate(-4px,-4px);transition:filter .2s;}
+.cur-glow{position:fixed;width:36px;height:36px;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(240,200,64,.18) 0%,transparent 70%);transition:all .15s;}
+
+/* IDLE BUBBLE */
+.idle-bubble{
+  position:fixed;z-index:9990;pointer-events:none;
+  background:rgba(9,6,14,.97);border:1px solid rgba(232,130,10,.5);
+  padding:5px 9px;
+  font-family:'Press Start 2P',monospace;font-size:.27rem;
+  color:var(--amber2);letter-spacing:.04em;line-height:1.7;
+  opacity:0;transform:translateY(5px) scale(.93);
+  transition:opacity .25s,transform .25s;
+  white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.6);
+}
+.idle-bubble::after{content:'';position:absolute;bottom:-5px;left:12px;
+  width:7px;height:7px;background:rgba(9,6,14,.97);
+  border-right:1px solid rgba(232,130,10,.5);
+  border-bottom:1px solid rgba(232,130,10,.5);
+  transform:rotate(45deg);}
 
 /* LOADER */
 #loader{position:fixed;inset:0;z-index:9999;background:#050308;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .8s;}
@@ -361,8 +379,9 @@ body::after{content:'';position:fixed;inset:0;z-index:1;
 </head>
 <body>
 
-<div class="cur" id="cur"></div>
-<div class="cur-ring" id="curRing"></div>
+<canvas id="curSword" class="cur-sword"></canvas>
+<div class="cur-glow" id="curGlow"></div>
+<div class="idle-bubble" id="idleBubble"></div>
 
 <!-- LOADER -->
 <div id="loader">
@@ -714,7 +733,7 @@ body::after{content:'';position:fixed;inset:0;z-index:1;
             <div class="rb-left"><div class="rb-ico">💼</div><div><div class="rb-lbl">LINKEDIN</div><div class="rb-val">For the serious folks</div></div></div>
             <span class="rb-arr">→</span>
           </a>
-          <a href="#" class="rb-link">
+          <a href="https://discordapp.com/users/ahsan_hunain" target="_blank" class="rb-link" onclick="if(!event.ctrlKey&&!event.metaKey){navigator.clipboard&&navigator.clipboard.writeText('ahsan_hunain');}"  >
             <div class="rb-left"><div class="rb-ico">💬</div><div><div class="rb-lbl">DISCORD</div><div class="rb-val">ahsan_hunain · Fastest reply</div></div></div>
             <span class="rb-arr">→</span>
           </a>
@@ -732,15 +751,101 @@ body::after{content:'';position:fixed;inset:0;z-index:1;
 </div>
 
 <script>
-/* CURSOR */
-const cur=document.getElementById('cur'),ring=document.getElementById('curRing');
-let mx=0,my=0,rx=0,ry=0;
-document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=mx+'px';cur.style.top=my+'px';});
-(function rl(){rx+=(mx-rx)*.12;ry+=(my-ry)*.12;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(rl);})();
-document.querySelectorAll('a,button,.quest-card,.stat-box').forEach(el=>{
-  el.addEventListener('mouseenter',()=>{cur.style.transform='translate(-50%,-50%) scale(2.2)';cur.style.background='var(--amber3)';ring.style.transform='translate(-50%,-50%) scale(1.5)';ring.style.borderColor='rgba(255,208,96,.6)';});
-  el.addEventListener('mouseleave',()=>{cur.style.transform='translate(-50%,-50%) scale(1)';cur.style.background='var(--amber2)';ring.style.transform='translate(-50%,-50%) scale(1)';ring.style.borderColor='rgba(232,130,10,.4)';});
+/* ── SWORD CURSOR ── */
+const swordCanvas=document.getElementById('curSword');
+const sctx=swordCanvas.getContext('2d');
+swordCanvas.width=32;swordCanvas.height=32;
+function drawSword(glow){
+  sctx.clearRect(0,0,32,32);
+  // Blade (tip top-right → pommel bottom-left)
+  const grad=sctx.createLinearGradient(28,4,4,28);
+  grad.addColorStop(0,'rgba(255,240,180,'+(glow?.95:.8)+')');
+  grad.addColorStop(.5,'rgba(240,200,64,'+(glow?.9:.75)+')');
+  grad.addColorStop(1,'rgba(180,130,20,'+(glow?.8:.6)+')');
+  sctx.strokeStyle=grad;sctx.lineWidth=2;sctx.lineCap='round';
+  sctx.beginPath();sctx.moveTo(28,4);sctx.lineTo(6,26);sctx.stroke();
+  // Guard
+  sctx.strokeStyle='rgba(212,168,32,'+(glow?.95:.85)+')';
+  sctx.lineWidth=2.5;sctx.lineCap='round';
+  sctx.beginPath();sctx.moveTo(10,20);sctx.lineTo(18,12);sctx.stroke();
+  // Pommel
+  sctx.fillStyle='rgba(212,168,32,'+(glow?1:.9)+')';
+  sctx.beginPath();sctx.arc(5,27,3,0,Math.PI*2);sctx.fill();
+  // Blade glow
+  if(glow){
+    sctx.shadowColor='rgba(240,200,64,.6)';sctx.shadowBlur=6;
+    sctx.strokeStyle='rgba(255,248,200,.4)';sctx.lineWidth=.5;
+    sctx.beginPath();sctx.moveTo(28,4);sctx.lineTo(6,26);sctx.stroke();
+    sctx.shadowBlur=0;
+  }
+}
+drawSword(false);
+let mx=0,my=0,swordGlow=false;
+document.addEventListener('mousemove',e=>{
+  mx=e.clientX;my=e.clientY;
+  swordCanvas.style.left=mx+'px';swordCanvas.style.top=my+'px';
+  document.getElementById('curGlow').style.left=mx+'px';
+  document.getElementById('curGlow').style.top=my+'px';
+  // Follow cursor — do NOT hide on move
+  if(idleOn){
+    idleBubble.style.left=(mx+20)+'px';
+    idleBubble.style.top=(my-46)+'px';
+  }
 });
+document.querySelectorAll('a,button,.quest-card,.stat-box,.nav-item').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{swordGlow=true;drawSword(true);document.getElementById('curGlow').style.width='60px';document.getElementById('curGlow').style.height='60px';});
+  el.addEventListener('mouseleave',()=>{swordGlow=false;drawSword(false);document.getElementById('curGlow').style.width='36px';document.getElementById('curGlow').style.height='36px';});
+});
+
+/* ── IDLE BUBBLE ── */
+const idleBubble=document.getElementById('idleBubble');
+const idleMsgs=[
+  "...still there?",
+  "the dungeon won't explore itself.",
+  "i've seen rocks move faster 🪨",
+  "are you AFK in MY portfolio?",
+  "click something. anything.",
+  "your game needs a backend. hint hint.",
+  "the quest board is right there 👆",
+  "adventurer? ...adventurer?",
+  "i can wait. my inbox can't.",
+  "scroll down. it gets better.",
+  "hire me and i'll stop talking 😄",
+  "this is fine. i'll just wait here.",
+];
+let lastAct=Date.now(),idleOn=false,msgCycle,lastIdx=-1;
+function randMsg(){let i;do{i=Math.floor(Math.random()*idleMsgs.length);}while(i===lastIdx);lastIdx=i;return idleMsgs[i];}
+
+function showIdle(){
+  idleOn=true;
+  idleBubble.textContent=randMsg();
+  idleBubble.style.left=(mx+20)+'px';
+  idleBubble.style.top=(my-46)+'px';
+  idleBubble.style.opacity='1';
+  idleBubble.style.transform='translateY(0) scale(1)';
+  msgCycle=setInterval(()=>{
+    idleBubble.style.opacity='0';
+    setTimeout(()=>{
+      if(idleOn){
+        idleBubble.textContent=randMsg();
+        idleBubble.style.left=(mx+20)+'px';
+        idleBubble.style.top=(my-46)+'px';
+        idleBubble.style.opacity='1';
+      }
+    },260);
+  },4500);
+}
+
+function hideIdle(){
+  idleOn=false;
+  clearInterval(msgCycle);
+  idleBubble.style.opacity='0';
+  idleBubble.style.transform='translateY(5px) scale(.93)';
+}
+
+setInterval(()=>{if(!idleOn&&Date.now()-lastAct>17000)showIdle();},1000);
+document.addEventListener('click',()=>{lastAct=Date.now();hideIdle();});
+document.addEventListener('scroll',()=>{lastAct=Date.now();hideIdle();},true);
 
 /* STARS */
 const sfd=document.getElementById('sf');
